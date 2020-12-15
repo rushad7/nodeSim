@@ -103,28 +103,22 @@ class Network:
     def gradientDescent(self, learing_rate):
         self.weights = self.weights - learing_rate*self.grad
 
-net = Network(4, 3, 3)
-print("Weights")
-print(net.weights)
-net.computeInput()
-print("Ball Coordinates")
-print(net.ballCoordinate)
-print("Node Coordinates")
-print(net.nodeCoordinate)
-print("Cost")
-net.computeCost()
-print(net.cost)
-net.forwardProp()
-net.updateBallCoord()
-net.updateNodeCoord()
-print("Ball Coordinates")
-print(net.ballCoordinate)
-print("Node Coordinates")
-print(net.nodeCoordinate)
-net.backProp()
-net.gradientDescent(0.2)
-print("Weights")
-print(net.weights)
-print("Cost")
-net.computeCost()
-print(net.cost)
+    def train(self, epochs, learning_rate):
+        
+        self.costList = []
+        
+        for i in range(epochs):
+
+            self.computeInput()
+            self.forwardProp()
+            self.updateBallCoord()
+            self.updateNodeCoord()
+            self.backProp()
+            self.gradientDescent(learning_rate)
+            self.computeCost()
+            self.costList.append(self.cost)
+
+            print(f"EPOCH {i}, COST = {self.cost.tolist()[0]}")
+
+            if ((self.cost == 0).tolist()[0]):
+                break
