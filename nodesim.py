@@ -1,12 +1,13 @@
 import torch
+import animate
 
 class Network:
     
-    def __init__(self, numberOfNodes, ssBreadth, ssLength):
+    def __init__(self, numberOfNodes, ssLength, ssBreadth):
         
         self.ssLength = ssLength
         self.ssBreadth = ssBreadth
-        self.goalCoordinate = torch.tensor([self.ssLength, self.ssBreadth])
+        self.goalCoordinate = torch.tensor([self.ssLength, self.ssBreadth/2])
         self.numberOfNodes = numberOfNodes
         self.weights = torch.rand(4, numberOfNodes)
         self.nodeCoordinate = torch.rand(numberOfNodes, 2)*min(ssLength, ssBreadth)
@@ -39,7 +40,7 @@ class Network:
 
     def forwardProp(self):
         z = self.weights@torch.transpose(self.inputVector, 0, 1) 
-        self.a = min(self.ssLength, self.ssBreadth)*torch.sigmoid(z)
+        self.a = torch.sigmoid(z)
 
     def updateBallCoord(self):
         point1 = torch.tensor([self.a[0], self.a[1]])
@@ -103,10 +104,12 @@ class Network:
     def gradientDescent(self, learing_rate):
         self.weights = self.weights - learing_rate*self.grad
 
-    def train(self, epochs, learning_rate):
-        
+    def run(self, epochs, learning_rate):
+
         self.costList = []
-        
+        self.ballPlotVector = torch.zeros(epochs, 2)*float('inf')
+        self.nodePlotVector = torch.zeros(epochs, self.numberOfNodes, 2)*float('inf')
+
         for i in range(epochs):
 
             self.computeInput()
@@ -116,9 +119,36 @@ class Network:
             self.backProp()
             self.gradientDescent(learning_rate)
             self.computeCost()
-            self.costList.append(self.cost)
 
-            print(f"EPOCH {i}, COST = {self.cost.tolist()[0]}")
+            self.costList.append(self.cost)
+            self.ballPlotVector[i] = self.ballCoordinate
+            self.nodePlotVector[i] = self.nodeCoordinate
+
+            if i%100 == 0:
+                print(f"EPOCH {i}, COST = {self.cost.tolist()[0]}")
 
             if ((self.cost == 0).tolist()[0]):
                 break
+        
+
+        shape = self.nodePlotVector.shape
+        tensor_reshaped = self.nodePlotVector.reshape(shape[0],-1)
+        tensor_reshaped = tensor_reshaped[~torch.any(tensor_reshaped.isnan(),dim=1)]
+        self.nodePlotVector = tensor_reshaped.reshape(tensor_reshaped.shape[0],*shape[1:])
+
+        shape = self.ballPlotVector.shape
+        tensor_reshaped = self.ballPlotVector.reshape(shape[0],-1)
+        tensor_reshaped = tensor_reshaped[~torch.any(tensor_reshaped.isnan(),dim=1)]
+        self.ballPlotVector = tensor_reshaped.reshape(tensor_reshaped.shape[0],*shape[1:])
+
+        nodePlotVector = self.nodePlotVector[:, :,  0].flatten()
+        ballPlotVector = self.ballPlotVector[:, 0]
+        xVector = torch.cat((nodePlotVector, ballPlotVector))
+
+        nodePlotVector = self.nodePlotVector[:, :,  1].flatten()
+        ballPlotVector = self.ballPlotVector[:, 1]
+        yVector = torch.cat((nodePlotVector, ballPlotVector))
+
+        coordMap = dict(zip(xVector, yVector))
+        ani = animate.Animation(coordMap, (self.ssLength, self.ssBreadth))
+        ani.start()
